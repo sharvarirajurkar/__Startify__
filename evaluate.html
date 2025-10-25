@@ -1,0 +1,63 @@
+<script>
+const form = document.getElementById('ideaForm');
+const resultSection = document.getElementById('resultSection');
+const similarityMsg = document.getElementById('similarityMsg');
+const predictionSection = document.getElementById('predictionSection');
+const tooSimilarSection = document.getElementById('tooSimilarSection');
+const fundingPred = document.getElementById('fundingPred');
+const confidenceRate = document.getElementById('confidenceRate');
+const reportContent = document.getElementById('reportContent');
+
+form.addEventListener('submit', async (e) => {
+  e.preventDefault();
+
+  resultSection.classList.remove('hidden');
+  similarityMsg.textContent = 'Analyzing your idea...';
+  predictionSection.classList.add('hidden');
+  tooSimilarSection.classList.add('hidden');
+
+  resultSection.scrollIntoView({ behavior: 'smooth', block: 'start' });
+
+  try {
+    // Make POST request to backend
+    const response = await fetch("http://127.0.0.1:5000/evaluate", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ description: document.getElementById("description").value })
+    });
+
+    const result = await response.json();
+
+    if (result.error) {
+      similarityMsg.textContent = "Error: " + result.error;
+      return;
+    }
+
+    similarityMsg.textContent = "Top Similar Startups Found:";
+
+    predictionSection.classList.remove("hidden");
+    reportContent.innerHTML = result.matches
+      .map(
+        (m) => `
+        <div class="result-card">
+          <h4>${m.rank}. ${m.company}</h4>
+          <p><strong>Industry:</strong> ${m.industry}</p>
+          <p><strong>Description:</strong> ${m.description}</p>
+          <p><strong>Funding:</strong> $${m.funding.toLocaleString()} (${m.round})</p>
+          <p><strong>City:</strong> ${m.city}</p>
+        </div>
+      `
+      )
+      .join("");
+
+    fundingPred.textContent = `$${result.average_funding.toLocaleString()}`;
+    confidenceRate.textContent = `${result.funded_count} of ${result.matches.length} funded`;
+
+    // Optional: hide "too similar" section if needed
+    tooSimilarSection.classList.add("hidden");
+
+  } catch (err) {
+    similarityMsg.textContent = "Error connecting to server: " + err.message;
+  }
+});
+</script>
